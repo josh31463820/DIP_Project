@@ -100,6 +100,7 @@ def TV_L2_Decomp(Im, lambda_val=2e-2):
 
 
 y_text, y_struct = TV_L2_Decomp(y, 0.05)
+#print
 
 # Display the results
 plt.figure(figsize=(10, 5))
