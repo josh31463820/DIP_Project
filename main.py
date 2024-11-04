@@ -3,7 +3,7 @@ import cv2
 import matplotlib.pyplot as plt
 
 # Read the compressed image
-compressed_img = 'train_50.png'  # Replace with your actual path
+compressed_img = 'train_50.jpeg'  # Replace with your actual path
 y = cv2.imread(compressed_img, cv2.IMREAD_COLOR)
 y = y.astype(np.float64) / 255.0  # Normalize to [0, 1]
 
@@ -35,8 +35,8 @@ def curve(m, sig):
 f, g = curve(100, 0.04)
 
 # Apply the curve to compressed and uncompressed image
-x_f = f[(x * 255).astype(int)] / 255
-y_f_compressed = f[(y * 255).astype(int)] / 255
+x_f = f((x * 255).astype(int)) / 255
+y_f_compressed = f((y * 255).astype(int)) / 255
 
 # Structure-texture separation (placeholder function)
 
@@ -50,17 +50,15 @@ def psf2otf(psf, size):
     return otf
 
 def TV_L2_Decomp(Im, lambda_val=2e-2):
-    # Ensure the image is in double format
     S = Im.astype(np.float64) / 255.0
     
     betamax = 1e5
     fx = np.array([[1, -1]])
     fy = np.array([[1], [-1]])
     N, M, D = S.shape
-    sizeI2D = (N, M)
     
-    otfFx = psf2otf(fx, sizeI2D)
-    otfFy = psf2otf(fy, sizeI2D)
+    otfFx = psf2otf(fx, (N, M))
+    otfFy = psf2otf(fy, (N, M))
     Normin1 = np.fft.fft2(S)
     
     Denormin2 = np.abs(otfFx)**2 + np.abs(otfFy)**2
@@ -82,10 +80,13 @@ def TV_L2_Decomp(Im, lambda_val=2e-2):
         
         # S subproblem
         Normin2 = np.concatenate([
-            u[:, -1, :] - u[:, 0, :], -np.diff(u, axis=1)
+            (u[:, -1, :] - u[:, 0, :])[:, np.newaxis],
+            -np.diff(u, axis=1)
         ], axis=1)
+        
         Normin2 += np.concatenate([
-            v[-1, :, :] - v[0, :, :], -np.diff(v, axis=0)
+            (v[-1, :, :] - v[0, :, :])[np.newaxis, :, :],  # Ensure shape (1, M, D)
+            -np.diff(v, axis=0)
         ], axis=0)
         
         FS = (Normin1 + beta * np.fft.fft2(Normin2)) / Denormin
@@ -94,9 +95,9 @@ def TV_L2_Decomp(Im, lambda_val=2e-2):
         beta *= 2
         print('.', end='')
     
-    T = Im - (S * 255.0).astype(np.uint8)  # Convert back to original image format
+    T = Im - (S * 255.0).astype(np.uint8)
     print()
-    return T, (S * 255.0).astype(np.uint8)  # Return T and S as uint8 images
+    return T, (S * 255.0).astype(np.uint8)
 
 
 y_text, y_struct = TV_L2_Decomp(y, 0.05)
